@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  author: "Config Drift Platform Team"
+  description: "Base role for fundamental system configuration"
+  license: "MIT"
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+    - name: Rocky
+      versions:
+        - 8
+        - 9
+  galaxy_tags:
+    - system
+    - base
+    - security
+
+dependencies: []

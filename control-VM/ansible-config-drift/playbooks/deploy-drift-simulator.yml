@@ -1,0 +1,79 @@
+---
+# Deploy drift simulator to target nodes
+# Note: This is for testing - in production, drift simulation would run separately
+
+- name: Deploy drift simulator components
+  hosts: all_nodes
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    simulator_dir: /opt/drift-simulator
+    
+  tasks:
+    - name: Create simulator directory
+      file:
+        path: "{{ simulator_dir }}"
+        state: directory
+        mode: '0755'
+    
+    - name: Install Python3 and pip
+      package:
+        name:
+          - python3
+          - python3-pip
+          - python3-venv
+        state: present
+    
+    - name: Copy simulator scripts from control node
+      synchronize:
+        src: ../drift-simulator/
+        dest: "{{ simulator_dir }}"
+        mode: push
+        rsync_opts:
+          - "--exclude=venv"
+          - "--exclude=logs"
+    
+    - name: Create Python virtual environment
+      command:
+        cmd: python3 -m venv {{ simulator_dir }}/venv
+        creates: "{{ simulator_dir }}/venv/bin/python"
+    
+    - name: Install required packages in venv
+      pip:
+        requirements: "{{ simulator_dir }}/requirements.txt"
+        virtualenv: "{{ simulator_dir }}/venv"
+      when: ansible_host == 'control'
+    
+    - name: Create safe-mode simulator config
+      copy:
+        content: |
+          simulator:
+            safe_mode: true  # Don't make actual changes
+            max_drifts_per_day: 1
+          protected_paths:
+            - /etc/passwd
+            - /etc/shadow
+            - /etc/sudoers
+        dest: "{{ simulator_dir }}/configs/local_config.yaml"
+    
+    - name: Create test cron job (safe mode)
+      cron:
+        name: "Test drift simulation"
+        minute: "*/30"
+        job: "cd {{ simulator_dir }} && source venv/bin/activate && python3 scripts/drift_simulator.py >> logs/cron.log 2>&1"
+        user: vagrant
+    
+    - name: Ensure logs directory exists
+      file:
+        path: "{{ simulator_dir }}/logs"
+        state: directory
+        mode: '0755'
+    
+    - name: Display deployment info
+      debug:
+        msg: |
+          Drift simulator deployed to {{ simulator_dir }}
+          Safe mode: enabled (no actual changes will be made)
+          Test cron: */30 * * * *
+          Manual test: cd {{ simulator_dir }} && source venv/bin/activate && python3 scripts/drift_simulator.py

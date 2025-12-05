@@ -1,0 +1,18 @@
+---
+# Variables for ALL nodes
+project_name: "config-drift-platform"
+environment: "production"
+monitoring_enabled: true
+
+# User management
+admin_user: "ansible-admin"
+admin_group: "admin"
+
+# Security settings
+ssh_permit_root_login: "no"
+ssh_password_authentication: "no"
+
+# Path configurations
+config_dir: "/etc/ansible-managed"
+backup_dir: "/var/backups/ansible"
+log_dir: "/var/log/ansible"

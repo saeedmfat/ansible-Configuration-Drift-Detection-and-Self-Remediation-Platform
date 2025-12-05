@@ -1,0 +1,17 @@
+[Unit]
+Description=Generate Daily Drift Report
+After=network.target
+
+[Service]
+Type=oneshot
+User=vagrant
+WorkingDirectory=/home/vagrant/ansible-config-drift
+ExecStart=/home/vagrant/ansible-config-drift/scripts/generate-daily-report.sh
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

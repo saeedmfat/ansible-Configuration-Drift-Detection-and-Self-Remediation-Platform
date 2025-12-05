@@ -1,0 +1,25 @@
+[Unit]
+Description=Configuration Drift Simulator
+After=network.target
+Wants=drift-simulator.timer
+
+[Service]
+Type=oneshot
+User=vagrant
+WorkingDirectory=/home/vagrant/ansible-config-drift/drift-simulator
+ExecStart=/home/vagrant/ansible-config-drift/drift-simulator/scripts/run_drift_simulation.sh
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PYTHONPATH=/home/vagrant/ansible-config-drift/drift-simulator
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/vagrant/ansible-config-drift/drift-simulator/logs
+
+[Install]
+WantedBy=multi-user.target

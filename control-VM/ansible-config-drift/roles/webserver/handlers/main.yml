@@ -1,0 +1,38 @@
+---
+# Webserver role handlers
+
+- name: restart nginx
+  service:
+    name: "{{ webserver_service.nginx }}"
+    state: restarted
+    enabled: yes
+  listen: "restart nginx"
+
+- name: reload nginx
+  service:
+    name: "{{ webserver_service.nginx }}"
+    state: reloaded
+  listen: "reload nginx"
+
+- name: restart apache
+  service:
+    name: "{{ webserver_service.apache }}"
+    state: restarted
+    enabled: yes
+  listen: "restart apache"
+
+- name: reload apache
+  service:
+    name: "{{ webserver_service.apache }}"
+    state: reloaded
+  listen: "reload apache"
+
+- name: validate nginx configuration
+  command: nginx -t
+  changed_when: false
+  listen: "validate nginx config"
+
+- name: validate apache configuration
+  command: apachectl configtest
+  changed_when: false
+  listen: "validate apache config"

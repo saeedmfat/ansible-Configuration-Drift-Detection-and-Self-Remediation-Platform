@@ -1,0 +1,65 @@
+---
+# Base role - Fundamental system configuration
+# This role ensures basic system state for all nodes
+
+- name: Include OS-specific variables
+  include_vars: "{{ item }}"
+  loop:
+    - "{{ ansible_distribution | lower }}.yml"
+  when: ansible_distribution is defined
+  tags: always
+
+- name: Update package cache
+  package:
+    update_cache: "{{ update_cache }}"
+    cache_valid_time: "{{ cache_valid_time }}"
+  when: package_manager == 'apt' or package_manager == 'dnf'
+  tags: packages
+
+- name: Install common packages
+  package:
+    name: "{{ common_packages }}"
+    state: present
+  tags: packages
+
+- name: Create admin user
+  user:
+    name: "{{ admin_user }}"
+    group: "{{ admin_group }}"
+    shell: /bin/bash
+    create_home: yes
+    state: present
+  tags: users
+
+- name: Setup SSH authorized keys for admin user
+  authorized_key:
+    user: "{{ admin_user }}"
+    state: present
+    key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+  tags: users,ssh
+
+- name: Create project directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_group }}"
+    mode: '0755'
+  loop:
+    - "{{ config_dir }}"
+    - "{{ backup_dir }}"
+    - "{{ log_dir }}"
+  tags: directories
+
+- name: Ensure SSH configuration is secure
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^{{ item.key }}"
+    line: "{{ item.key }} {{ item.value }}"
+    state: present
+    validate: /usr/sbin/sshd -t -f %s
+  loop:
+    - { key: "PermitRootLogin", value: "{{ ssh_permit_root_login }}" }
+    - { key: "PasswordAuthentication", value: "{{ ssh_password_authentication }}" }
+  notify: restart ssh
+  tags: security,ssh

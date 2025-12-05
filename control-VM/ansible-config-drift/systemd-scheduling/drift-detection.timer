@@ -1,0 +1,12 @@
+[Unit]
+Description=Run drift detection periodically
+Requires=drift-detection.service
+
+[Timer]
+# Run every 15 minutes
+OnCalendar=*-*-* *:0/15:00
+RandomizedDelaySec=300
+Persistent=true
+
+[Install]
+WantedBy=timers.target

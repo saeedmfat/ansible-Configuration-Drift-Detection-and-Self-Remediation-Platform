@@ -1,0 +1,185 @@
+---
+# Master Remediation Playbook with Canary Deployment
+# Safely remediates drifts across all nodes
+
+- name: Canary Remediation Phase
+  hosts: "{{ canary_group | default('target1') }}"
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    phase: "canary"
+    
+  pre_tasks:
+    - name: Log canary phase start
+      debug:
+        msg: "Starting CANARY remediation on {{ inventory_hostname }}"
+    
+    - name: Create pre-remediation backup
+      copy:
+        content: "Pre-remediation backup timestamp: {{ ansible_date_time.iso8601 }}"
+        dest: "/var/backups/ansible/pre_remediation_{{ ansible_date_time.iso8601_basic }}.txt"
+      tags: backup
+  
+  roles:
+    - role: base
+      tags: base
+    
+    - role: webserver
+      tags: webserver
+  
+  tasks:
+    - include_tasks: "{{ playbook_dir }}/remediate-file-changes.yml"
+      tags: files
+    
+    - include_tasks: "{{ playbook_dir }}/remediate-services.yml"
+      tags: services
+    
+    - include_tasks: "{{ playbook_dir }}/remediate-security.yml"
+      tags: security
+  
+  post_tasks:
+    - name: Validate canary remediation
+      uri:
+        url: "http://localhost{{ health_check_path }}"
+        return_content: yes
+        status_code: 200
+        timeout: 10
+      register: health_check
+      until: health_check.status == 200
+      retries: 5
+      delay: 2
+      ignore_errors: yes
+    
+    - name: Log canary phase result
+      debug:
+        msg: "Canary remediation {{ 'SUCCESS' if health_check.status == 200 else 'FAILED' }} on {{ inventory_hostname }}"
+    
+    - name: Set canary result fact
+      set_fact:
+        canary_success: "{{ health_check.status == 200 }}"
+      run_once: yes
+      delegate_to: localhost
+
+- name: Wait and monitor canary nodes
+  hosts: localhost
+  gather_facts: no
+  
+  tasks:
+    - name: Wait before full rollout
+      pause:
+        minutes: 5
+      when: canary_success | default(false)
+    
+    - name: Check canary node health
+      uri:
+        url: "http://{{ hostvars[canary_group | default('target1')].ansible_default_ipv4.address }}{{ health_check_path }}"
+        status_code: 200
+        timeout: 5
+      register: canary_health
+      until: canary_health.status == 200
+      retries: 3
+      delay: 2
+      when: canary_success | default(false)
+    
+    - name: Decide on full rollout
+      set_fact:
+        proceed_with_full_remediation: "{{ canary_health.status == 200 if canary_success | default(false) else false }}"
+      when: canary_success | default(false)
+
+- name: Full Remediation Phase
+  hosts: "{{ full_remediation_group | default('all_nodes') }}"
+  become: yes
+  gather_facts: yes
+  serial: 1  # Remediate one node at a time for safety
+  
+  vars:
+    phase: "full"
+  
+  when: proceed_with_full_remediation | default(false)
+  
+  pre_tasks:
+    - name: Log full remediation start
+      debug:
+        msg: "Starting FULL remediation on {{ inventory_hostname }} (node {{ ansible_play_hosts_all.index(inventory_hostname) + 1 }} of {{ ansible_play_hosts_all | length }})"
+    
+    - name: Skip if already remediated in canary phase
+      meta: end_play
+      when: inventory_hostname in groups[canary_group | default('target1')]
+    
+    - name: Create pre-remediation backup
+      copy:
+        content: "Pre-remediation backup timestamp: {{ ansible_date_time.iso8601 }}"
+        dest: "/var/backups/ansible/pre_remediation_{{ ansible_date_time.iso8601_basic }}.txt"
+      tags: backup
+  
+  roles:
+    - role: base
+      tags: base
+    
+    - role: webserver
+      tags: webserver
+  
+  tasks:
+    - include_tasks: "{{ playbook_dir }}/remediate-file-changes.yml"
+      tags: files
+    
+    - include_tasks: "{{ playbook_dir }}/remediate-services.yml"
+      tags: services
+    
+    - include_tasks: "{{ playbook_dir }}/remediate-security.yml"
+      tags: security
+  
+  post_tasks:
+    - name: Validate full remediation
+      uri:
+        url: "http://localhost{{ health_check_path }}"
+        return_content: yes
+        status_code: 200
+        timeout: 10
+      register: health_check
+      until: health_check.status == 200
+      retries: 5
+      delay: 2
+      ignore_errors: yes
+    
+    - name: Log node remediation result
+      debug:
+        msg: "Node {{ inventory_hostname }} remediation {{ 'SUCCESS' if health_check.status == 200 else 'FAILED' }}"
+    
+    - name: Record remediation result
+      lineinfile:
+        path: "/var/log/ansible/remediation.log"
+        create: yes
+        line: "{{ ansible_date_time.iso8601 }} - {{ inventory_hostname }} - {{ 'SUCCESS' if health_check.status == 200 else 'FAILED' }}"
+    
+    - name: Trigger rollback on failure
+      include_tasks: rollback.yml
+      when: health_check.status != 200
+      tags: rollback
+
+- name: Generate Remediation Report
+  hosts: localhost
+  gather_facts: no
+  
+  tasks:
+    - name: Collect remediation logs from all nodes
+      fetch:
+        src: /var/log/ansible/remediation.log
+        dest: "reports/remediation_{{ ansible_date_time.iso8601_basic }}/"
+        flat: no
+    
+    - name: Generate consolidation report
+      template:
+        src: remediation_report.j2
+        dest: "reports/remediation_{{ ansible_date_time.iso8601_basic }}/consolidated_report.md"
+    
+    - name: Display final summary
+      debug:
+        msg: |
+          === REMEDIATION COMPLETE ===
+          Canary Phase: {{ 'SUCCESS' if canary_success | default(false) else 'FAILED' }}
+          Full Remediation: {{ 'PROCEEDED' if proceed_with_full_remediation | default(false) else 'SKIPPED' }}
+          Reports saved to: reports/remediation_{{ ansible_date_time.iso8601_basic }}/
+          
+          Next: Review logs and verify system stability.

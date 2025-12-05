@@ -1,0 +1,69 @@
+---
+# Security Remediation Playbook
+# Fixes security-related drifts
+
+- name: Remediate security drifts
+  hosts: all_nodes
+  become: yes
+  
+  tasks:
+    - name: Remove unauthorized users
+      user:
+        name: "{{ item }}"
+        state: absent
+        remove: yes
+      loop: "{{ ansible_facts.users | select('match', '^testuser_|^unauthorized_') | list }}"
+      when: ansible_facts.users is defined
+      tags: users
+    
+    - name: Ensure admin users exist
+      user:
+        name: "{{ item }}"
+        state: present
+        groups: sudo,admin
+        shell: /bin/bash
+        create_home: yes
+      loop:
+        - ansible-admin
+        - vagrant
+      tags: users
+    
+    - name: Fix file permissions
+      file:
+        path: "{{ item }}"
+        mode: '0644'
+        owner: root
+        group: root
+      loop:
+        - /etc/ssh/sshd_config
+        - /etc/passwd
+        - /etc/shadow
+        - /etc/sudoers
+      tags: permissions
+    
+    - name: Fix web directory permissions
+      file:
+        path: "{{ website_root }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ nginx_user | default(apache_user | default('www-data')) }}"
+        group: "{{ nginx_user | default(apache_user | default('www-data')) }}"
+        recurse: yes
+      tags: permissions
+    
+    - name: Ensure firewall rules are correct
+      firewalld:
+        service: http
+        permanent: yes
+        state: enabled
+        immediate: yes
+      when: ansible_os_family == "RedHat"
+      tags: firewall
+    
+    - name: Ensure UFW rules are correct (Ubuntu)
+      ufw:
+        rule: allow
+        port: "{{ nginx_default_port if webserver == 'nginx' else apache_listen_port }}"
+        proto: tcp
+      when: ansible_os_family == "Debian"
+      tags: firewall

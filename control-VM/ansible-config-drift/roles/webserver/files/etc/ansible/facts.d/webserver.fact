@@ -1,0 +1,71 @@
+#!/bin/bash
+# Custom fact for webserver configuration drift detection
+
+echo "{"
+echo "  \"webserver\": {"
+
+# Detect installed webserver
+if systemctl is-active --quiet nginx; then
+    echo "    \"installed\": \"nginx\","
+    WEBSERVER="nginx"
+    CONFIG_DIR="/etc/nginx"
+elif systemctl is-active --quiet apache2 || systemctl is-active --quiet httpd; then
+    if systemctl is-active --quiet apache2; then
+        echo "    \"installed\": \"apache\","
+        WEBSERVER="apache2"
+        CONFIG_DIR="/etc/apache2"
+    else
+        echo "    \"installed\": \"apache\","
+        WEBSERVER="httpd"
+        CONFIG_DIR="/etc/httpd"
+    fi
+else
+    echo "    \"installed\": \"none\","
+    WEBSERVER="none"
+fi
+
+# Get service status
+if [ "$WEBSERVER" != "none" ]; then
+    echo "    \"service_status\": \"$(systemctl is-active $WEBSERVER)\","
+    echo "    \"service_enabled\": \"$(systemctl is-enabled $WEBSERVER 2>/dev/null || echo 'unknown')\","
+    
+    # Check if default website is running
+    if curl -s -o /dev/null -w "%{http_code}" http://localhost/ 2>/dev/null | grep -q "200\|301\|302"; then
+        echo "    \"http_responding\": true,"
+    else
+        echo "    \"http_responding\": false,"
+    fi
+else
+    echo "    \"service_status\": \"inactive\","
+    echo "    \"service_enabled\": \"unknown\","
+    echo "    \"http_responding\": false,"
+fi
+
+# Count config files
+if [ -d "$CONFIG_DIR/sites-enabled" ]; then
+    SITE_COUNT=$(find $CONFIG_DIR/sites-enabled -type l -name "*.conf" 2>/dev/null | wc -l)
+    echo "    \"enabled_sites\": $SITE_COUNT,"
+elif [ -d "$CONFIG_DIR/conf.d" ]; then
+    SITE_COUNT=$(find $CONFIG_DIR/conf.d -type f -name "*.conf" 2>/dev/null | wc -l)
+    echo "    \"enabled_sites\": $SITE_COUNT,"
+else
+    echo "    \"enabled_sites\": 0,"
+fi
+
+# Get last modified time of key directories
+if [ -d "/var/www" ]; then
+    echo "    \"www_last_modified\": \"$(stat -c %y /var/www 2>/dev/null | cut -d'.' -f1 || echo 'unknown')\","
+else
+    echo "    \"www_last_modified\": \"unknown\","
+fi
+
+# Get memory usage of webserver
+if [ "$WEBSERVER" != "none" ]; then
+    MEM_USAGE=$(ps aux | grep "$WEBSERVER" | grep -v grep | awk '{sum+=$6} END {print sum/1024}')
+    echo "    \"memory_mb\": ${MEM_USAGE:-0}"
+else
+    echo "    \"memory_mb\": 0"
+fi
+
+echo "  }"
+echo "}"

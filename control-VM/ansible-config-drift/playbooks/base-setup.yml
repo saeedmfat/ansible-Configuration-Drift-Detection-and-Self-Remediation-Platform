@@ -1,0 +1,43 @@
+---
+# Base Setup Playbook
+# Applies fundamental configuration to all nodes
+
+- name: Apply base configuration to all nodes
+  hosts: all_nodes
+  become: yes
+  gather_facts: yes
+  
+  pre_tasks:
+    - name: Update apt cache (Ubuntu)
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+      tags: always
+
+    - name: Update dnf cache (Rocky)
+      dnf:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "RedHat"
+      tags: always
+
+  roles:
+    - role: base
+      tags: base
+
+  post_tasks:
+    - name: Display completion message
+      debug:
+        msg: "Base configuration applied to {{ inventory_hostname }}"
+      tags: always
+
+    - name: Record configuration timestamp
+      lineinfile:
+        path: "{{ config_dir }}/last_configured"
+        create: yes
+        line: "Configured at {{ ansible_date_time.iso8601 }} by Ansible"
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: '0644'
+      tags: always

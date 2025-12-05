@@ -1,0 +1,61 @@
+# Drift Simulator Configuration
+simulator:
+  # Simulation settings
+  max_drifts_per_day: 3
+  min_interval_minutes: 30
+  max_interval_minutes: 180
+  
+  # Target systems (these should match your Ansible inventory)
+  target_nodes:
+    - name: target1
+      ip: 192.168.60.11
+      os: ubuntu
+      role: webserver
+    - name: target2
+      ip: 192.168.60.12
+      os: ubuntu
+      role: webserver
+    - name: target3
+      ip: 192.168.60.13
+      os: rocky
+      role: webserver
+  
+  # Drift severity distribution
+  severity_distribution:
+    low: 20
+    medium: 50
+    high: 25
+    critical: 5
+  
+  # Safe mode (won't make actual changes, just logs)
+  safe_mode: false
+
+# Paths to protect (never modify these)
+protected_paths:
+  - /etc/passwd
+  - /etc/shadow
+  - /etc/sudoers
+  - /boot
+  - /root
+
+# Notification settings
+notifications:
+  enabled: true
+  # Slack webhook URL (if configured)
+  slack_webhook: ""
+  # Email settings
+  email_enabled: false
+  smtp_server: ""
+  recipients: []
+
+# Logging
+logging:
+  level: INFO
+  max_log_files: 100
+  max_log_size_mb: 10
+
+# Remote execution (simulate drifts on remote nodes)
+remote_execution:
+  enabled: false
+  ssh_key_path: /home/vagrant/.ssh/id_rsa
+  ansible_inventory: /home/vagrant/ansible-config-drift/inventories/production/hosts.ini

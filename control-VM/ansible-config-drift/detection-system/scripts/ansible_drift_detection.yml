@@ -1,0 +1,57 @@
+---
+# Ansible playbook for drift detection integration
+- name: Run drift detection using Ansible
+  hosts: all_nodes
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    detection_dir: /opt/drift-detection
+    report_dir: /var/log/drift-detection
+    
+  tasks:
+    - name: Create detection directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ detection_dir }}"
+        - "{{ report_dir }}"
+    
+    - name: Copy detection scripts
+      copy:
+        src: "{{ playbook_dir }}/../detection-system/scripts/drift_detector.py"
+        dest: "{{ detection_dir }}/drift_detector.py"
+        mode: '0755'
+    
+    - name: Copy configuration
+      copy:
+        src: "{{ playbook_dir }}/../detection-system/config/detection_config.yaml"
+        dest: "{{ detection_dir }}/config.yaml"
+    
+    - name: Run drift detection
+      command: "python3 {{ detection_dir }}/drift_detector.py"
+      environment:
+        PYTHONPATH: "{{ detection_dir }}"
+      register: detection_result
+      changed_when: detection_result.rc != 0
+      failed_when: false  # Don't fail playbook on detection
+    
+    - name: Capture detection output
+      copy:
+        content: "{{ detection_result.stdout }}"
+        dest: "{{ report_dir }}/detection_{{ ansible_date_time.iso8601 }}.log"
+    
+    - name: Display detection summary
+      debug:
+        msg: |
+          Drift Detection Results for {{ inventory_hostname }}:
+          Exit Code: {{ detection_result.rc }}
+          Output: {{ detection_result.stdout_lines[-5:] | join('\n') }}
+    
+    - name: Generate detection report
+      template:
+        src: detection_report.j2
+        dest: "{{ report_dir }}/report_{{ ansible_date_time.iso8601 }}.json"
+      when: detection_result.rc != 0

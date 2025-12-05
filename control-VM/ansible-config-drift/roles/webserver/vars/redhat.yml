@@ -1,0 +1,24 @@
+---
+# Rocky/CentOS/RedHat specific variables
+webserver_packages:
+  nginx:
+    - nginx
+    - nginx-mod-stream
+    - nginx-mod-http-perl
+  apache:
+    - httpd
+    - mod_ssl
+
+webserver_service:
+  nginx: nginx
+  apache: httpd
+
+webserver_config_dir:
+  nginx: /etc/nginx
+  apache: /etc/httpd
+
+webserver_log_dir:
+  nginx: /var/log/nginx
+  apache: /var/log/httpd
+
+firewall_service: firewalld

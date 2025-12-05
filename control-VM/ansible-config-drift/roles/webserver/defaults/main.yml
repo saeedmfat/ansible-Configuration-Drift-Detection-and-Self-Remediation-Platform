@@ -1,0 +1,52 @@
+---
+# Default variables for webserver role
+# These represent our DESIRED STATE
+
+# Web server selection (nginx or apache)
+webserver: nginx
+
+# Nginx-specific defaults
+nginx_version: "latest"
+nginx_user: www-data
+nginx_worker_processes: "auto"
+nginx_worker_connections: 1024
+nginx_keepalive_timeout: 65
+nginx_default_port: 80
+nginx_ssl_port: 443
+
+# Apache-specific defaults
+apache_version: "latest"
+apache_user: www-data
+apache_server_admin: "webmaster@localhost"
+apache_listen_port: 80
+apache_ssl_port: 443
+
+# Website configuration
+website_name: "config-drift-demo"
+website_domain: "driftdemo.local"
+website_root: "/var/www/{{ website_name }}"
+website_index_content: "Welcome to Configuration Drift Detection Platform"
+website_maintenance_mode: false
+
+# SSL/TLS configuration
+ssl_enabled: false
+ssl_cert_path: "/etc/ssl/certs/{{ website_domain }}.crt"
+ssl_key_path: "/etc/ssl/private/{{ website_domain }}.key"
+ssl_self_signed: true
+
+# Firewall rules
+firewall_allow_http: true
+firewall_allow_https: false
+
+# Monitoring and logging
+access_log_enabled: true
+error_log_enabled: true
+log_retention_days: 30
+
+# Health check configuration
+health_check_path: "/health"
+health_check_interval: 30
+health_check_timeout: 5
+
+# Desired state checksum file (for drift detection)
+state_checksum_file: "{{ config_dir }}/webserver_state.json"

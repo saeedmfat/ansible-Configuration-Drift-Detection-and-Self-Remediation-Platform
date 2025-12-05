@@ -1,0 +1,9 @@
+---
+# Handlers for base role
+
+- name: restart ssh
+  service:
+    name: "{{ service_names.ssh }}"
+    state: restarted
+    enabled: yes
+  when: service_names.ssh is defined

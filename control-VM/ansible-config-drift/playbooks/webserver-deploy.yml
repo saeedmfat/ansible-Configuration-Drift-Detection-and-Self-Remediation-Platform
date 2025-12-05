@@ -1,0 +1,80 @@
+---
+# Webserver Deployment Playbook
+# Enforces desired state for web servers
+
+- name: Deploy and configure web servers
+  hosts: web_servers
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    # Override default for this playbook
+    website_name: "config-drift-website"
+    website_domain: "drift-{{ inventory_hostname }}.local"
+  
+  pre_tasks:
+    - name: Update package cache
+      package_facts:
+    
+    - name: Check system requirements
+      fail:
+        msg: "Insufficient memory (need at least 512MB, have {{ ansible_memfree_mb }}MB free)"
+      when: ansible_memfree_mb < 512
+      tags: validation
+
+  roles:
+    - role: base
+      tags: base
+    
+    - role: webserver
+      tags: webserver
+
+  tasks:
+    - name: Deploy custom facts
+      include_role:
+        name: webserver
+        tasks_from: deploy-facts
+      tags: facts
+
+    - name: Detect configuration drift
+      include_role:
+        name: webserver
+        tasks_from: detect-drift
+      tags: drift,check
+
+  post_tasks:
+    - name: Display deployment summary
+      debug:
+        msg: |
+          Web Server Deployment Complete!
+          ===============================
+          Node: {{ inventory_hostname }}
+          Web Server: {{ webserver }}
+          Website: http://{{ ansible_default_ipv4.address }}
+          Health Check: http://{{ ansible_default_ipv4.address }}{{ health_check_path }}
+          State File: {{ state_checksum_file }}
+          Drift Detected: {{ drift_detected | default('Not checked') }}
+      tags: summary
+
+    - name: Verify web server is responding
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}{{ health_check_path }}"
+        return_content: yes
+        status_code: 200
+        timeout: 10
+      register: health_check
+      until: health_check.status == 200
+      retries: 5
+      delay: 2
+      ignore_errors: yes
+      tags: verification
+
+    - name: Record deployment timestamp
+      lineinfile:
+        path: "{{ config_dir }}/deployment.log"
+        create: yes
+        line: "{{ ansible_date_time.iso8601 }} - {{ inventory_hostname }} - webserver:{{ webserver }} - drift:{{ drift_detected | default('unknown') }}"
+        owner: "{{ admin_user }}"
+        group: "{{ admin_group }}"
+        mode: '0644'
+      tags: logging

@@ -1,0 +1,20 @@
+---
+# Test Connection Playbook
+# Validates Ansible can connect and gather facts
+
+- name: Test connectivity and gather facts
+  hosts: all_nodes
+  gather_facts: yes
+  
+  tasks:
+    - name: Test ping
+      ping:
+
+    - name: Display basic system info
+      debug:
+        msg: |
+          Hostname: {{ ansible_hostname }}
+          OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Memory: {{ ansible_memtotal_mb }}MB
+          CPUs: {{ ansible_processor_vcpus }}
+      tags: info

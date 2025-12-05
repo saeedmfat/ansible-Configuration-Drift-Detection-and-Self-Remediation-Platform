@@ -1,0 +1,69 @@
+---
+# File Change Remediation Playbook
+# Restores files from backups or templates
+
+- name: Remediate file changes
+  hosts: all_nodes
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    backup_dir: /var/backups/ansible
+    max_backup_age_days: 7
+    
+  tasks:
+    - name: Check for recent backups
+      find:
+        paths: "{{ backup_dir }}"
+        patterns: "*.bak.*"
+        age: "-{{ max_backup_age_days }}d"
+        file_type: file
+      register: recent_backups
+      changed_when: false
+    
+    - name: Restore web content from backup
+      copy:
+        src: "{{ item.path }}"
+        dest: "{{ item.path | regex_replace('\.bak\.[0-9]+$', '') }}"
+        remote_src: yes
+        owner: "{{ nginx_user | default(apache_user | default('www-data')) }}"
+        group: "{{ nginx_user | default(apache_user | default('www-data')) }}"
+        mode: '0644'
+      loop: "{{ recent_backups.files }}"
+      when: 
+        - "'index.html' in item.path"
+        - item.path | regex_search('\.bak\.[0-9]+$')
+      tags: restore_content
+    
+    - name: Restore configuration files from templates
+      template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: root
+        group: root
+        mode: '0644'
+      loop:
+        - { src: "nginx-site.conf.j2", dest: "/etc/nginx/sites-available/{{ website_name }}.conf" }
+        - { src: "apache-site.conf.j2", dest: "/etc/httpd/conf.d/{{ website_name }}.conf" }
+      when: 
+        - webserver == 'nginx' and item.src == 'nginx-site.conf.j2'
+        - or
+        - webserver == 'apache' and item.src == 'apache-site.conf.j2'
+      tags: restore_config
+    
+    - name: Remove unauthorized files
+      find:
+        paths: 
+          - /etc/ansible-managed
+          - /tmp
+        patterns: "unauthorized*,test_*,*.tmp"
+        file_type: file
+      register: unauthorized_files
+      changed_when: false
+    
+    - name: Delete unauthorized files
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ unauthorized_files.files }}"
+      tags: cleanup

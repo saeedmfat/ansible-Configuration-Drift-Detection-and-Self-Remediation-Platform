@@ -1,0 +1,94 @@
+# Self-Remediation System Configuration
+remediation:
+  # Safety settings
+  enabled: true
+  safe_mode: false  # Set to true for testing (no actual changes)
+  require_approval: false
+  max_concurrent_remediations: 1
+  
+  # Canary deployment settings
+  canary:
+    enabled: true
+    percentage: 25  # Start with 25% of nodes
+    wait_time_minutes: 5  # Wait before full rollout
+    success_threshold: 100  # Percentage of canary nodes that must succeed
+    
+  # Threshold settings
+  thresholds:
+    max_drifts_per_node: 10
+    max_critical_drifts: 3
+    max_remediation_time_minutes: 30
+    
+  # Rollback settings
+  rollback:
+    enabled: true
+    automatic_on_failure: true
+    max_rollback_attempts: 3
+    backup_before_remediation: true
+    
+  # Validation settings
+  validation:
+    pre_remediation_validation: true
+    post_remediation_validation: true
+    validation_timeout_seconds: 300
+    required_services:
+      - ssh
+      - nginx
+      - apache2
+      - httpd
+    
+  # Notification settings
+  notifications:
+    on_start: true
+    on_success: true
+    on_failure: true
+    on_rollback: true
+
+# Remediation strategies
+strategies:
+  file_integrity:
+    action: restore_from_backup
+    backup_source: git
+    max_file_size_mb: 10
+    
+  service_status:
+    action: restart_service
+    max_restart_attempts: 3
+    wait_after_restart_seconds: 10
+    
+  package_management:
+    action: reinstall_package
+    verify_signatures: true
+    
+  user_management:
+    action: remove_unauthorized_users
+    preserve_admin_users:
+      - ansible-admin
+      - vagrant
+      - root
+    
+  configuration_files:
+    action: restore_from_template
+    template_source: ansible_roles
+
+# Logging and reporting
+logging:
+  level: INFO
+  file: logs/remediation.log
+  max_size_mb: 50
+  backup_count: 10
+  
+  audit:
+    enabled: true
+    git_integration: true
+    repo_path: /opt/git/repos/remediation-audit.git
+
+# Integration points
+integration:
+  ansible:
+    playbooks_path: ../playbooks/
+    inventory_path: ../inventories/production/hosts.ini
+    
+  detection_system:
+    reports_path: ../detection-system/reports/
+    api_url: http://localhost:8080/api/v1/reports/latest

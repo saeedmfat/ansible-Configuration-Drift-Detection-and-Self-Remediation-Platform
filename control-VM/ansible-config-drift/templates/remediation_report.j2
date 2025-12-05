@@ -1,0 +1,31 @@
+# Remediation Report
+**Generated:** {{ ansible_date_time.iso8601 }}
+
+## Summary
+- **Canary Phase:** {{ 'SUCCESS' if canary_success | default(false) else 'FAILED' }}
+- **Full Remediation:** {{ 'COMPLETED' if proceed_with_full_remediation | default(false) else 'NOT ATTEMPTED' }}
+
+## Nodes Processed
+{% for host in ansible_play_hosts_all %}
+### {{ host }}
+- **IP Address:** {{ hostvars[host].ansible_default_ipv4.address if hostvars[host].ansible_default_ipv4 is defined else 'N/A' }}
+- **OS:** {{ hostvars[host].ansible_distribution if hostvars[host].ansible_distribution is defined else 'Unknown' }}
+- **In Canary Group:** {{ 'Yes' if host in groups[canary_group | default('target1')] else 'No' }}
+- **Remediation Status:** {{ 'Processed' if host in ansible_play_hosts else 'Skipped' }}
+{% endfor %}
+
+## Recommendations
+{% if not canary_success | default(false) %}
+1. **CRITICAL:** Canary remediation failed. Investigate before proceeding.
+2. Check canary node logs: /var/log/ansible/remediation.log on {{ canary_group | default('target1') }}
+{% endif %}
+
+{% if proceed_with_full_remediation | default(false) %}
+1. Monitor remediated nodes for 24 hours
+2. Verify all services are running: `systemctl list-units --type=service --state=running`
+3. Check web accessibility on all nodes
+{% endif %}
+
+## Files
+- Logs: `reports/remediation_{{ ansible_date_time.iso8601_basic }}/`
+- This report: `reports/remediation_{{ ansible_date_time.iso8601_basic }}/consolidated_report.md`

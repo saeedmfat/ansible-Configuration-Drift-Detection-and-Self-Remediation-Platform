@@ -1,0 +1,12 @@
+[Unit]
+Description=Run drift simulation periodically
+Requires=drift-simulator.service
+
+[Timer]
+# Run every 2 hours with randomized delay
+OnCalendar=*-*-* */2:00
+RandomizedDelaySec=900
+Persistent=true
+
+[Install]
+WantedBy=timers.target

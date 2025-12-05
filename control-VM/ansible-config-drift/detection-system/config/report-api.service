@@ -1,0 +1,29 @@
+[Unit]
+Description=Drift Detection Report API Server
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=vagrant
+WorkingDirectory=/home/vagrant/ansible-config-drift/detection-system
+ExecStart=/home/vagrant/ansible-config-drift/detection-system/venv/bin/python scripts/report_api.py
+Environment=PATH=/home/vagrant/ansible-config-drift/detection-system/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PYTHONPATH=/home/vagrant/ansible-config-drift/detection-system
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/vagrant/ansible-config-drift/detection-system/reports
+
+# Restart policy
+Restart=on-failure
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

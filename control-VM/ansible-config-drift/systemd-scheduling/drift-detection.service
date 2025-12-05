@@ -1,0 +1,21 @@
+[Unit]
+Description=Configuration Drift Detection
+After=network.target
+
+[Service]
+Type=oneshot
+User=vagrant
+WorkingDirectory=/home/vagrant/ansible-config-drift/detection-system
+ExecStart=/home/vagrant/ansible-config-drift/detection-system/venv/bin/python scripts/drift_detector.py
+Environment=PATH=/home/vagrant/ansible-config-drift/detection-system/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,56 @@
+---
+# Service Remediation Playbook
+# Ensures services are in desired state
+
+- name: Remediate service states
+  hosts: all_nodes
+  become: yes
+  
+  tasks:
+    - name: Ensure web server is running
+      service:
+        name: "{{ webserver_service[webserver] }}"
+        state: started
+        enabled: yes
+      tags: service_web
+    
+    - name: Ensure SSH is running
+      service:
+        name: "{{ service_names.ssh }}"
+        state: started
+        enabled: yes
+      tags: service_ssh
+    
+    - name: Ensure cron is running
+      service:
+        name: "{{ service_names.cron }}"
+        state: started
+        enabled: yes
+      tags: service_cron
+    
+    - name: Remove unauthorized cron jobs
+      find:
+        paths: /etc/cron.d
+        patterns: "test_*,unauthorized*"
+        file_type: file
+      register: unauthorized_cron
+      changed_when: false
+    
+    - name: Delete unauthorized cron files
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ unauthorized_cron.files }}"
+      tags: cleanup_cron
+    
+    - name: Verify services are responding
+      uri:
+        url: "http://localhost{{ health_check_path }}"
+        status_code: 200
+        timeout: 5
+      register: health_check
+      until: health_check.status == 200
+      retries: 3
+      delay: 2
+      ignore_errors: yes
+      tags: verify

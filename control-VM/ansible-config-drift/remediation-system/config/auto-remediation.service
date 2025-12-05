@@ -1,0 +1,27 @@
+[Unit]
+Description=Automatic Configuration Drift Remediation
+After=network.target
+Wants=auto-remediation.timer
+
+[Service]
+Type=oneshot
+User=vagrant
+WorkingDirectory=/home/vagrant/ansible-config-drift
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=ANSIBLE_CONFIG=/home/vagrant/ansible-config-drift/ansible.cfg
+
+# Run remediation workflow
+ExecStartPre=/bin/bash -c "echo 'Starting auto-remediation at $(date)' >> /var/log/auto-remediation.log"
+ExecStart=/usr/bin/ansible-playbook -i inventories/production/hosts.ini playbooks/master-remediate.yml -e "canary_group=target1"
+ExecStartPost=/bin/bash -c "echo 'Auto-remediation finished at $(date)' >> /var/log/auto-remediation.log"
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

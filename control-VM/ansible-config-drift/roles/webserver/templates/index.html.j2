@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ website_name }} - Configuration Drift Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .status-ok {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .monitoring-info {
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{{ website_name }}</h1>
+        <div class="status status-ok">
+            ✅ System Status: Configuration Drift Detection Platform - DESIRED STATE ACTIVE
+        </div>
+        
+        <div class="monitoring-info">
+            <h3>📊 Monitoring Information</h3>
+            <p><strong>Hostname:</strong> {{ ansible_hostname }}</p>
+            <p><strong>IP Address:</strong> {{ ansible_default_ipv4.address }}</p>
+            <p><strong>Web Server:</strong> {{ webserver | upper }}</p>
+            <p><strong>Last Configuration:</strong> {{ ansible_date_time.iso8601 }}</p>
+        </div>
+        
+        <h2>About This Platform</h2>
+        <p>This is a demonstration of Configuration Drift Detection and Self-Remediation.</p>
+        <p>The system continuously monitors for unauthorized changes and automatically restores the desired state.</p>
+        
+        <h2>Health Endpoints</h2>
+        <ul>
+            <li><a href="{{ health_check_path }}">{{ health_check_path }}</a> - Health check</li>
+            <li><code>/var/log/{{ webserver }}/</code> - Access and error logs</li>
+        </ul>
+        
+        <div class="status status-info">
+            ℹ️ Desired State: <code>{{ state_checksum_file }}</code> contains expected configuration checksums
+        </div>
+        
+        <footer>
+            <p><small>Ansible Managed - {{ ansible_managed }}</small></p>
+        </footer>
+    </div>
+</body>
+</html>

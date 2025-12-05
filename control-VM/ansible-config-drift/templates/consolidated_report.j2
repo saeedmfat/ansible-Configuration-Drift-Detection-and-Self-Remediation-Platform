@@ -1,0 +1,21 @@
+{
+  "consolidated_report": {
+    "timestamp": "{{ ansible_date_time.iso8601 }}",
+    "detection_run_id": "{{ ansible_date_time.iso8601_basic }}",
+    "summary": {
+      "total_nodes": {{ ansible_play_hosts | length }},
+      "nodes_with_drifts": {{ (ansible_play_hosts | selectattr('drifts_detected', 'defined') | selectattr('drifts_detected') | list) | length }},
+      "nodes_without_drifts": {{ (ansible_play_hosts | selectattr('drifts_detected', 'defined') | rejectattr('drifts_detected') | list) | length }}
+    },
+    "node_details": [
+      {% for host in ansible_play_hosts %}
+      {
+        "hostname": "{{ hostvars[host].inventory_hostname }}",
+        "ip_address": "{{ hostvars[host].ansible_default_ipv4.address if hostvars[host].ansible_default_ipv4 is defined else 'unknown' }}",
+        "drifts_detected": {{ hostvars[host].drifts_detected | default(false) | to_json }},
+        "os": "{{ hostvars[host].ansible_distribution if hostvars[host].ansible_distribution is defined else 'unknown' }} {{ hostvars[host].ansible_distribution_version if hostvars[host].ansible_distribution_version is defined else '' }}"
+      }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ]
+  }
+}

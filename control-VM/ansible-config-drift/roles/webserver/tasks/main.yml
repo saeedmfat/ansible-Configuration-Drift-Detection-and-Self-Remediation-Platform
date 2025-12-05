@@ -1,0 +1,141 @@
+---
+# Webserver role main tasks
+# Enforces desired state for web server configuration
+
+- name: Include OS-specific variables
+  include_vars: "{{ item }}"
+  loop:
+    - "{{ ansible_distribution | lower }}.yml"
+  when: ansible_distribution is defined
+  tags: always
+
+- name: Fail if unsupported webserver
+  fail:
+    msg: "Unsupported webserver '{{ webserver }}'. Choose 'nginx' or 'apache'."
+  when: webserver not in ['nginx', 'apache']
+  tags: always
+
+- name: Install webserver packages
+  package:
+    name: "{{ webserver_packages[webserver] }}"
+    state: "{{ lookup('vars', webserver + '_version') }}"
+    update_cache: yes
+  notify: "restart {{ webserver }}"
+  tags: packages
+
+- name: Create website root directory
+  file:
+    path: "{{ website_root }}"
+    state: directory
+    owner: "{{ lookup('vars', webserver + '_user') }}"
+    group: "{{ lookup('vars', webserver + '_user') }}"
+    mode: '0755'
+  tags: directories
+
+- name: Deploy index.html
+  template:
+    src: index.html.j2
+    dest: "{{ website_root }}/index.html"
+    owner: "{{ lookup('vars', webserver + '_user') }}"
+    group: "{{ lookup('vars', webserver + '_user') }}"
+    mode: '0644'
+  notify: "reload {{ webserver }}"
+  tags: content
+
+- name: Create health check file
+  copy:
+    content: "OK\n"
+    dest: "{{ website_root }}/health.txt"
+    owner: "{{ lookup('vars', webserver + '_user') }}"
+    group: "{{ lookup('vars', webserver + '_user') }}"
+    mode: '0644'
+  tags: health
+
+- name: Configure web server
+  template:
+    src: "{{ webserver }}-site.conf.j2"
+    dest: "{{ webserver_config_dir[webserver] }}/sites-available/{{ website_name }}.conf"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: "reload {{ webserver }}"
+  tags: configuration
+
+- name: Enable website configuration
+  file:
+    src: "{{ webserver_config_dir[webserver] }}/sites-available/{{ website_name }}.conf"
+    dest: "{{ webserver_config_dir[webserver] }}/sites-enabled/{{ website_name }}.conf"
+    state: link
+  when: ansible_os_family == "Debian"
+  notify: "restart {{ webserver }}"
+  tags: configuration
+
+- name: Configure Apache on Rocky (different path)
+  copy:
+    src: "{{ webserver_config_dir[webserver] }}/sites-available/{{ website_name }}.conf"
+    dest: "{{ webserver_config_dir[webserver] }}/conf.d/{{ website_name }}.conf"
+  when: ansible_os_family == "RedHat" and webserver == "apache"
+  notify: "restart {{ webserver }}"
+  tags: configuration
+
+- name: Ensure webserver is running and enabled
+  service:
+    name: "{{ webserver_service[webserver] }}"
+    state: started
+    enabled: yes
+  tags: service
+
+- name: Configure firewall for HTTP
+  firewalld:
+    service: http
+    permanent: yes
+    state: enabled
+    immediate: yes
+  when: 
+    - firewall_allow_http
+    - firewall_service == "firewalld"
+    - ansible_os_family == "RedHat"
+  tags: firewall
+
+- name: Configure UFW for HTTP (Ubuntu)
+  ufw:
+    rule: allow
+    port: "{{ nginx_default_port if webserver == 'nginx' else apache_listen_port }}"
+    proto: tcp
+  when:
+    - firewall_allow_http
+    - firewall_service == "ufw"
+    - ansible_os_family == "Debian"
+  tags: firewall
+
+- name: Record desired state checksums (for drift detection)
+  block:
+    - name: Create checksum directory
+      file:
+        path: "{{ config_dir }}"
+        state: directory
+        mode: '0755'
+      tags: checksum
+
+    - name: Calculate checksums of critical files
+      set_fact:
+        desired_checksums: |
+          {
+            "index.html": "{{ lookup('file', website_root + '/index.html') | hash('sha256') }}",
+            "config_file": "{{ lookup('file', webserver_config_dir[webserver] + '/sites-available/' + website_name + '.conf') | hash('sha256') }}",
+            "health_file": "{{ lookup('file', website_root + '/health.txt') | hash('sha256') }}"
+          }
+      tags: checksum
+
+    - name: Save checksums to file
+      copy:
+        content: "{{ desired_checksums | to_nice_json }}"
+        dest: "{{ state_checksum_file }}"
+        mode: '0644'
+      tags: checksum
+
+  always:
+    - name: Display checksum info
+      debug:
+        msg: "Desired state checksums saved to {{ state_checksum_file }}"
+      tags: checksum

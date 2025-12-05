@@ -1,0 +1,39 @@
+# Ansible-Pull Configuration
+---
+ansible_pull:
+  # Git repository configuration
+  repository: /opt/git/repos/config-drift.git
+  branch: main
+  clone: true
+  checkout: true
+  
+  # Playbook to run
+  playbook: playbooks/webserver-deploy.yml
+  
+  # Scheduling
+  schedule: "*/30 * * * *"  # Every 30 minutes
+  random_delay: 300  # Random delay up to 5 minutes
+  
+  # Local configuration
+  local_temp_dir: /tmp/ansible-pull
+  purge_local_temp: true
+  
+  # Inventory
+  inventory: localhost,
+  connection: local
+  
+  # Security
+  accept_host_key: true
+  verify_commit: false  # For lab environment only
+  
+  # Logging
+  log_file: /var/log/ansible-pull.log
+  log_append: true
+  
+  # Notification
+  notify_on_change: true
+  notify_cmd: /usr/local/bin/notify-drift.sh
+  
+  # Retry logic
+  max_attempts: 3
+  retry_delay: 60

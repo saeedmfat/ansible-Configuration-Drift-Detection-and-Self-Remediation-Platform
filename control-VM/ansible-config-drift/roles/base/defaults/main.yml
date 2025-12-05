@@ -1,0 +1,18 @@
+---
+# Default variables for base role
+# These can be overridden in group_vars or host_vars
+
+# Package management
+update_cache: yes
+cache_valid_time: 3600
+
+# Common packages (OS-specific defaults will be in group_vars)
+common_packages: []
+
+# User configuration
+admin_user: "ansible-admin"
+admin_group: "admin"
+
+# Security defaults
+ssh_permit_root_login: "no"
+ssh_password_authentication: "no"

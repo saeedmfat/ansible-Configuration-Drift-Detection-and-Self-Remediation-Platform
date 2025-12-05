@@ -1,0 +1,49 @@
+# Ansible Managed: {{ ansible_managed }}
+# Desired State Configuration for {{ website_domain }}
+
+server {
+    listen {{ nginx_default_port }};
+    listen [::]:{{ nginx_default_port }};
+    
+    server_name {{ website_domain }} www.{{ website_domain }};
+    root {{ website_root }};
+    index index.html index.htm;
+    
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    
+    # Logging
+    {% if access_log_enabled %}
+    access_log {{ webserver_log_dir.nginx }}/{{ website_name }}.access.log;
+    {% endif %}
+    
+    {% if error_log_enabled %}
+    error_log {{ webserver_log_dir.nginx }}/{{ website_name }}.error.log;
+    {% endif %}
+    
+    # Main location block
+    location / {
+        try_files $uri $uri/ =404;
+        
+        {% if website_maintenance_mode %}
+        # Maintenance mode
+        return 503 "Service Temporarily Unavailable - Configuration Maintenance";
+        {% endif %}
+    }
+    
+    # Health check endpoint
+    location {{ health_check_path }} {
+        access_log off;
+        return 200 "OK\n";
+        add_header Content-Type text/plain;
+    }
+    
+    # Deny access to hidden files
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+}

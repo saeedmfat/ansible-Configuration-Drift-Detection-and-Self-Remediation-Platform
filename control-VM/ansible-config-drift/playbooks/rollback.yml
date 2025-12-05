@@ -1,0 +1,21 @@
+---
+# Rollback tasks for failed remediation
+
+- name: Find latest backup
+  find:
+    paths: /var/backups/ansible
+    patterns: "pre_remediation_*.txt"
+    file_type: file
+    age: -10m  # Last 10 minutes
+  register: recent_backups
+  changed_when: false
+
+- name: Restore from backup (simulated - would restore actual files)
+  debug:
+    msg: "ROLLBACK: Would restore {{ inventory_hostname }} from backup. Recent backups: {{ recent_backups.files | length }}"
+  when: recent_backups.files | length > 0
+
+- name: Alert on rollback
+  debug:
+    msg: "ALERT: Remediation failed on {{ inventory_hostname }}, manual intervention required!"
+  when: recent_backups.files | length == 0

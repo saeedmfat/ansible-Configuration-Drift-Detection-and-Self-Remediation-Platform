@@ -1,0 +1,20 @@
+---
+# Deploy webserver to all nodes with customizations
+
+- name: Deploy to Ubuntu nodes
+  hosts: ubuntu_nodes
+  become: yes
+  vars:
+    webserver: nginx
+    website_name: "ubuntu-website"
+  roles:
+    - webserver
+
+- name: Deploy to Rocky node
+  hosts: rocky_nodes
+  become: yes
+  vars:
+    webserver: apache
+    website_name: "rocky-website"
+  roles:
+    - webserver

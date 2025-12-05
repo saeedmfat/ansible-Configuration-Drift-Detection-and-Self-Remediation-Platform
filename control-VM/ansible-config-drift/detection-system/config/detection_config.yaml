@@ -1,0 +1,100 @@
+# Drift Detection System Configuration
+detection:
+  # Detection settings
+  check_interval_minutes: 15
+  max_detection_history: 1000
+  enable_real_time_detection: true
+  
+  # Paths to monitor for drift
+  monitored_paths:
+    - /var/www
+    - /etc/nginx
+    - /etc/apache2
+    - /etc/httpd
+    - /etc/ansible-managed
+    - /etc/ssh
+  
+  # File patterns to monitor
+  monitored_patterns:
+    - "*.conf"
+    - "*.json"
+    - "*.yaml"
+    - "*.yml"
+    - "*.html"
+    - "*.js"
+    - "*.css"
+  
+  # Services to monitor
+  monitored_services:
+    - nginx
+    - apache2
+    - httpd
+    - ssh
+    - cron
+  
+  # Checksum algorithms
+  checksum_algorithms:
+    - sha256
+    - md5
+  
+  # Alert thresholds
+  alert_thresholds:
+    critical_severity: 3
+    high_severity: 5
+    medium_severity: 10
+    alert_cooldown_minutes: 30
+
+# Reporting settings
+reporting:
+  report_formats:
+    - json
+    - html
+    - markdown
+  
+  report_retention:
+    daily: 30
+    weekly: 12
+    monthly: 24
+  
+  git_integration:
+    enabled: true
+    repo_path: /opt/git/repos/config-drift.git
+    branch: reports
+    commit_message_prefix: "[DRIFT]"
+  
+  # Local API server
+  api_server:
+    enabled: true
+    host: 0.0.0.0
+    port: 8080
+    debug: false
+
+# Notification settings
+notifications:
+  enabled: true
+  methods:
+    - log
+    - email
+    - slack
+  
+  # Email configuration
+  email:
+    smtp_server: localhost
+    smtp_port: 25
+    from_address: drift-detection@localhost
+    to_addresses:
+      - admin@localhost
+  
+  # Slack configuration
+  slack:
+    webhook_url: ""
+    channel: "#drift-detection"
+    username: "DriftBot"
+
+# Logging configuration
+logging:
+  level: INFO
+  file: logs/detection.log
+  max_size_mb: 10
+  backup_count: 5
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

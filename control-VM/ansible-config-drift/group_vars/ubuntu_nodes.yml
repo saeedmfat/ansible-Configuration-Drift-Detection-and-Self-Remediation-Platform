@@ -1,0 +1,20 @@
+---
+# Ubuntu-specific variables
+package_manager: apt
+update_cache: yes
+cache_valid_time: 3600
+
+# Common packages for Ubuntu
+common_packages:
+  - curl
+  - wget
+  - vim
+  - htop
+  - git
+  - unattended-upgrades
+
+# Service names mapping
+service_names:
+  ssh: ssh
+  ntp: ntp
+  cron: cron

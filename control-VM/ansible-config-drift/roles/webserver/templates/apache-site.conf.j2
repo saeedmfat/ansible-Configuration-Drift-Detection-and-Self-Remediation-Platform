@@ -1,0 +1,44 @@
+# Ansible Managed: {{ ansible_managed }}
+# Desired State Configuration for {{ website_domain }}
+
+<VirtualHost *:{{ apache_listen_port }}>
+    ServerAdmin {{ apache_server_admin }}
+    ServerName {{ website_domain }}
+    ServerAlias www.{{ website_domain }}
+    
+    DocumentRoot {{ website_root }}
+    
+    <Directory {{ website_root }}>
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+        
+        {% if website_maintenance_mode %}
+        # Maintenance mode
+        RewriteEngine On
+        RewriteRule ^(.*)$ /maintenance.html [R=503,L]
+        {% endif %}
+    </Directory>
+    
+    # Logging
+    {% if access_log_enabled %}
+    CustomLog {{ webserver_log_dir.apache }}/{{ website_name }}.access.log combined
+    {% endif %}
+    
+    {% if error_log_enabled %}
+    ErrorLog {{ webserver_log_dir.apache }}/{{ website_name }}.error.log
+    {% endif %}
+    
+    # Health check endpoint
+    Alias {{ health_check_path }} {{ website_root }}/health.txt
+    
+    # Security headers
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+    
+    # Deny access to hidden files
+    <FilesMatch "^\.">
+        Require all denied
+    </FilesMatch>
+</VirtualHost>

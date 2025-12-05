@@ -1,0 +1,53 @@
+---
+# Detect configuration drift
+
+- name: Check if desired state file exists
+  stat:
+    path: "{{ state_checksum_file }}"
+  register: state_file
+  tags: drift
+
+- name: Load desired state checksums
+  set_fact:
+    desired_state: "{{ lookup('file', state_checksum_file) | from_json }}"
+  when: state_file.stat.exists
+  tags: drift
+
+- name: Calculate current checksums
+  set_fact:
+    current_state: |
+      {
+        "index.html": "{{ lookup('file', website_root + '/index.html') | hash('sha256') }}",
+        "config_file": "{{ lookup('file', webserver_config_dir[webserver] + '/sites-available/' + website_name + '.conf') | hash('sha256') }}",
+        "health_file": "{{ lookup('file', website_root + '/health.txt') | hash('sha256') }}"
+      }
+  tags: drift
+
+- name: Compare checksums and detect drift
+  set_fact:
+    drift_detected: "{{ desired_state != current_state }}"
+    drift_details: |
+      {
+        "desired": {{ desired_state | to_json }},
+        "current": {{ current_state | to_json }},
+        "differences": [
+          {% for key in desired_state.keys() %}
+          {% if desired_state[key] != current_state[key] %}
+          "{{ key }}: desired={{ desired_state[key][:8] }}... current={{ current_state[key][:8] }}..."{% if not loop.last %},{% endif %}
+          {% endif %}
+          {% endfor %}
+        ]
+      }
+  when: state_file.stat.exists
+  tags: drift
+
+- name: Report drift status
+  debug:
+    msg: |
+      Drift Detection Results:
+      - Desired state file: {{ 'exists' if state_file.stat.exists else 'missing' }}
+      - Drift detected: {{ drift_detected | default('unknown') }}
+      {% if drift_detected %}
+      - Differences: {{ drift_details.differences | default([]) | join(', ') }}
+      {% endif %}
+  tags: drift

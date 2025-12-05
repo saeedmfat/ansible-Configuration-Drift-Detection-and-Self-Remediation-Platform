@@ -1,0 +1,27 @@
+---
+# Deploy custom facts for drift detection
+
+- name: Create ansible facts directory
+  file:
+    path: /etc/ansible/facts.d
+    state: directory
+    mode: '0755'
+  tags: facts
+
+- name: Deploy webserver custom fact
+  copy:
+    src: etc/ansible/facts.d/webserver.fact
+    dest: /etc/ansible/facts.d/webserver.fact
+    mode: '0755'
+  tags: facts
+
+- name: Test custom fact
+  command: /etc/ansible/facts.d/webserver.fact
+  changed_when: false
+  register: fact_test
+  tags: facts
+
+- name: Display custom fact
+  debug:
+    var: fact_test.stdout
+  tags: facts

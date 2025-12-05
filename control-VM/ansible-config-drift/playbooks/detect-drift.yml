@@ -1,0 +1,90 @@
+---
+# Ansible Drift Detection Playbook
+# Runs drift detection on all nodes and generates reports
+
+- name: Run drift detection on all nodes
+  hosts: all_nodes
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    detection_dir: /opt/drift-detection
+    report_base: /var/log/drift-reports
+    
+  tasks:
+    - name: Ensure detection directories exist
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ detection_dir }}"
+        - "{{ report_base }}"
+        - "{{ report_base }}/{{ ansible_date_time.date }}"
+    
+    - name: Copy detection system
+      synchronize:
+        src: ../detection-system/
+        dest: "{{ detection_dir }}"
+        mode: push
+        rsync_opts:
+          - "--exclude=venv"
+          - "--exclude=*.pyc"
+          - "--exclude=__pycache__"
+    
+    - name: Run drift detection in check mode
+      command: "cd {{ detection_dir }} && python3 scripts/drift_detector.py"
+      register: detection_result
+      changed_when: detection_result.rc != 0
+      failed_when: false  # Don't fail on detection
+    
+    - name: Save detection report
+      copy:
+        content: "{{ detection_result.stdout }}"
+        dest: "{{ report_base }}/{{ ansible_date_time.date }}/detection_{{ inventory_hostname }}_{{ ansible_date_time.iso8601_basic }}.log"
+      when: detection_result.stdout | length > 0
+    
+    - name: Check if any drifts were detected
+      set_fact:
+        drifts_detected: "{{ detection_result.rc != 0 }}"
+    
+    - name: Generate summary for this node
+      debug:
+        msg: |
+          Node: {{ inventory_hostname }}
+          Drifts Detected: {{ drifts_detected }}
+          Exit Code: {{ detection_result.rc }}
+          Output Summary: {{ detection_result.stdout_lines[-3:] if detection_result.stdout_lines else 'No output' }}
+      when: drifts_detected
+    
+  post_tasks:
+    - name: Collect all detection reports
+      fetch:
+        src: "{{ report_base }}/{{ ansible_date_time.date }}/detection_{{ inventory_hostname }}*.log"
+        dest: "{{ playbook_dir }}/../detection-system/reports/collected/"
+        flat: yes
+      run_once: yes
+      delegate_to: localhost
+    
+    - name: Generate consolidated report
+      template:
+        src: consolidated_report.j2
+        dest: "{{ playbook_dir }}/../detection-system/reports/consolidated_{{ ansible_date_time.iso8601_basic }}.json"
+      run_once: yes
+      delegate_to: localhost
+      when: drifts_detected | default(false) | any
+    
+    - name: Display final summary
+      debug:
+        msg: |
+          === DRIFT DETECTION SUMMARY ===
+          Total nodes checked: {{ ansible_play_hosts | length }}
+          Nodes with drifts: {{ (ansible_play_hosts | selectattr('drifts_detected', 'defined') | selectattr('drifts_detected') | list) | length }}
+          Reports saved to: {{ playbook_dir }}/../detection-system/reports/
+          
+          Next steps:
+          1. Review reports: ls -la {{ playbook_dir }}/../detection-system/reports/
+          2. Run remediation: ansible-playbook playbooks/webserver-deploy.yml
+          3. View API: http://localhost:8080 (if API server is running)
+      run_once: yes
+      delegate_to: localhost

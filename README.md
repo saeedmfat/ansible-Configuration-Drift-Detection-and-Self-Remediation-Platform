@@ -367,9 +367,6 @@ curl http://localhost:8080/api/v1/reports/latest | jq .
 4. Push to branch (`git push origin feature/improvement`)
 5. Create Pull Request
 
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 👨‍💻 Author
 

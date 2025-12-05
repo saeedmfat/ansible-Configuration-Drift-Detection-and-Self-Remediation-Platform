@@ -35,12 +35,11 @@ Vagrant.configure("2") do |config|
     end
   end
 
+  # Target 3 - Rocky Linux (CentOS alternative)
   config.vm.define "target3" do |target3|
-    target3.vm.box = "ubuntu/focal64"
+    target3.vm.box = "rockylinux/8"
     target3.vm.hostname = "target3"
     target3.vm.network "private_network", ip: "192.168.60.13"
-    target3.vm.boot_timeout = 300  # Increase timeout to 10 minutes
-
     target3.vm.provider "virtualbox" do |vb|
       vb.memory = "2048"
       vb.cpus = 1

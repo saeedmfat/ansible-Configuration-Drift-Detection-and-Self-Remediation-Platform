@@ -23,173 +23,117 @@ The system emulates real production infrastructure while staying within **16GB R
 
 ```mermaid
 graph TB
-    subgraph "HOST MACHINE (16GB RAM)"
-        subgraph "CONTROL NODE (2GB RAM)"
-            C1[Ansible Controller]
-            C2[Git Server<br/>config-drift.git]
-            C3[Drift Simulator<br/>Python/Faker]
-            C4[Detection Engine<br/>Checksum Validation]
-            C5[Flask API Server<br/>Port 8080]
-            C6[Notification System]
-            C7[Remediation Engine<br/>Canary Logic]
-            
-            C1 --> C2
-            C3 --> C4
-            C4 --> C5
-            C4 --> C7
-            C5 --> C6
-            C7 --> C1
-            C7 --> C6
-        end
+    %% Title
+    style Title fill:#1565c0,stroke:#0d47a1,stroke-width:3px,color:white
+    Title["<b>🚀 CONFIGURATION DRIFT DETECTION & SELF-REMEDIATION PLATFORM</b><br/><sub>Complete Automation System - 16GB RAM Home Lab</sub>"]
+    
+    %% Core Components with better colors
+    subgraph "🖥️ CONTROL NODE"
+        CN1["<b>🧠 Ansible Controller</b><br/>Orchestration & Enforcement"]
+        CN2["<b>🔍 Drift Detection Engine</b><br/>SHA256 Checksum Validation"]
+        CN3["<b>⚙️ Remediation Engine</b><br/>Canary Deployment & Rollback"]
+        CN4["<b>📊 Flask API Server</b><br/>REST Reports & Dashboard"]
         
-        subgraph "NETWORK 192.168.60.0/24"
-            subgraph "TARGET 1 (2GB RAM)"
-                T1A[Ubuntu 20.04]
-                T1B[Nginx Web Server]
-                T1C[Ansible-Pull Client]
-                T1D[/var/www/config-drift-website/]
-                
-                T1A --> T1B
-                T1B --> T1D
-                T1A --> T1C
-            end
-            
-            subgraph "TARGET 2 (2GB RAM)"
-                T2A[Ubuntu 20.04]
-                T2B[Nginx Web Server]
-                T2C[Ansible-Pull Client]
-                T2D[/var/www/ubuntu-website/]
-                
-                T2A --> T2B
-                T2B --> T2D
-                T2A --> T2C
-            end
-            
-            subgraph "TARGET 3 (2GB RAM)"
-                T3A[Rocky Linux 8]
-                T3B[Apache Web Server]
-                T3C[Ansible-Pull Client]
-                T3D[/var/www/rocky-website/]
-                
-                T3A --> T3B
-                T3B --> T3D
-                T3A --> T3C
-            end
-        end
+        style CN1 fill:#2196f3,stroke:#0d47a1,color:white
+        style CN2 fill:#4caf50,stroke:#1b5e20,color:white
+        style CN3 fill:#ff9800,stroke:#e65100,color:white
+        style CN4 fill:#9c27b0,stroke:#4a148c,color:white
     end
     
-    %% Data Flow
-    C1 -- "Ansible Push<br/>SSH/Playbooks" --> T1A
-    C1 -- "Ansible Push<br/>SSH/Playbooks" --> T2A
-    C1 -- "Ansible Push<br/>SSH/Playbooks" --> T3A
-    
-    C3 -- "Simulated Drifts" --> T1D
-    C3 -- "Simulated Drifts" --> T2D
-    C3 -- "Simulated Drifts" --> T3D
-    
-    C4 -- "Checksum Validation" --> T1D
-    C4 -- "Checksum Validation" --> T2D
-    C4 -- "Checksum Validation" --> T3D
-    C4 -- "Service Status Check" --> T1B
-    C4 -- "Service Status Check" --> T2B
-    C4 -- "Service Status Check" --> T3B
-    
-    C5 -- "API Queries" --> Human[Human Operator]
-    C6 -- "Alerts/Notifications" --> Human
-    
-    C2 -- "Git Pull" --> T1C
-    C2 -- "Git Pull" --> T2C
-    C2 -- "Git Pull" --> T3C
-    
-    C7 -- "Canary Remediation<br/>(target1 first)" --> T1A
-    C7 -- "Full Remediation" --> T2A
-    C7 -- "Full Remediation" --> T3A
-    
-    %% Sub-processes
-    subgraph "DETECTION WORKFLOW"
-        DW1[File Checksum<br/>Calculation]
-        DW2[State Comparison<br/>vs Desired State]
-        DW3[Drift Classification<br/>Critical/High/Medium/Low]
-        DW4[Report Generation<br/>JSON/HTML/Markdown]
+    subgraph "🌐 TARGET NODES"
+        TN1["<b>🎯 Ubuntu/Nginx</b><br/>Target 1<br/>192.168.60.11"]
+        TN2["<b>🎯 Ubuntu/Nginx</b><br/>Target 2<br/>192.168.60.12"]
+        TN3["<b>🎯 Rocky/Apache</b><br/>Target 3<br/>192.168.60.13"]
         
-        DW1 --> DW2
-        DW2 --> DW3
-        DW3 --> DW4
+        style TN1 fill:#4caf50,stroke:#1b5e20,color:white
+        style TN2 fill:#4caf50,stroke:#1b5e20,color:white
+        style TN3 fill:#ff5722,stroke:#bf360c,color:white
     end
     
-    subgraph "REMEDIATION WORKFLOW"
-        RW1[Canary Selection<br/>25% of nodes]
-        RW2[Pre-remediation<br/>Validation]
-        RW3[Backup Creation]
-        RW4[Apply Fixes]
-        RW5[Post-remediation<br/>Validation]
-        RW6[Success?] -->|Yes| RW7[Full Rollout]
-        RW6 -->|No| RW8[Automatic Rollback]
+    %% Workflows
+    subgraph "🔄 DETECTION WORKFLOW"
+        DW1["📝 Monitor Configs<br/>Every 15min"]
+        DW2["🔢 Calculate Checksums"]
+        DW3["⚖️ Compare vs Desired State"]
+        DW4["📋 Generate Reports<br/>JSON/HTML"]
         
-        RW1 --> RW2
-        RW2 --> RW3
-        RW3 --> RW4
-        RW4 --> RW5
-        RW5 --> RW6
+        style DW1 fill:#03a9f4,stroke:#0277bd,color:white
+        style DW2 fill:#03a9f4,stroke:#0277bd,color:white
+        style DW3 fill:#03a9f4,stroke:#0277bd,color:white
+        style DW4 fill:#03a9f4,stroke:#0277bd,color:white
     end
     
-    subgraph "AUDIT TRAIL"
-        AT1[Git Commit<br/>Detection Events]
-        AT2[Git Commit<br/>Remediation Actions]
-        AT3[Immutable Log<br/>All Changes]
+    subgraph "⚡ REMEDIATION WORKFLOW"
+        RW1["🎯 Canary (25% nodes)"]
+        RW2["✅ Validate & Backup"]
+        RW3["🔧 Apply Fixes"]
+        RW4["📈 Full Rollout<br/>or 🔄 Rollback"]
         
-        AT1 --> AT3
-        AT2 --> AT3
+        style RW1 fill:#ff9800,stroke:#e65100,color:white
+        style RW2 fill:#ff9800,stroke:#e65100,color:white
+        style RW3 fill:#ff9800,stroke:#e65100,color:white
+        style RW4 fill:#ff9800,stroke:#e65100,color:white
     end
     
-    %% Connections to sub-processes
-    C4 --> DW1
-    DW4 --> C5
-    DW4 --> AT1
+    %% Git & Audit
+    Git["<b>📚 Git Server</b><br/>config-drift.git<br/>Immutable Audit Trail"]
+    style Git fill:#607d8b,stroke:#37474f,color:white
     
-    C7 --> RW1
-    RW7 --> AT2
-    RW8 --> AT2
+    %% Notification System
+    Notify["<b>🔔 Notification System</b><br/>Slack/Email/Terminal"]
+    style Notify fill:#009688,stroke:#00695c,color:white
+    
+    %% Connections
+    CN1 -- "SSH/Ansible<br/>Push Configuration" --> TN1
+    CN1 -- "SSH/Ansible<br/>Push Configuration" --> TN2
+    CN1 -- "SSH/Ansible<br/>Push Configuration" --> TN3
+    
+    Git -- "Git Pull<br/>Every 30min" --> TN1
+    Git -- "Git Pull<br/>Every 30min" --> TN2
+    Git -- "Git Pull<br/>Every 30min" --> TN3
+    
+    CN2 -- "Detect Drifts" --> DW1
+    DW1 --> DW2 --> DW3 --> DW4
+    DW4 --> CN4
+    DW4 --> Git
+    
+    CN3 -- "Trigger Remediation" --> RW1
+    RW1 --> RW2 --> RW3 --> RW4
+    RW4 --> CN1
+    
+    CN4 --> Notify
+    CN3 --> Notify
     
     %% Scheduling
-    subgraph "SCHEDULING (Systemd Timers)"
-        S1[Drift Simulation<br/>Every 2 hours]
-        S2[Drift Detection<br/>Every 15 minutes]
-        S3[Ansible-Pull<br/>Every 30 minutes]
-        S4[Daily Reports<br/>11:30 PM]
+    subgraph "⏰ AUTOMATION SCHEDULING"
+        S1["🔄 Drift Simulation<br/>Every 2 hours"]
+        S2["👁️ Drift Detection<br/>Every 15 minutes"]
+        S3["🤖 Ansible-Pull<br/>Every 30 minutes"]
+        S4["📅 Daily Reports<br/>11:30 PM"]
         
-        S1 --> C3
-        S2 --> C4
-        S3 --> T1C
-        S3 --> T2C
-        S3 --> T3C
-        S4 --> C5
+        style S1 fill:#795548,stroke:#3e2723,color:white
+        style S2 fill:#795548,stroke:#3e2723,color:white
+        style S3 fill:#795548,stroke:#3e2723,color:white
+        style S4 fill:#795548,stroke:#3e2723,color:white
     end
+    
+    S1 --> CN2
+    S2 --> CN2
+    S3 --> Git
+    S4 --> CN4
+    
+    %% Resource Summary
+    Resources["<b>📊 RESOURCE SUMMARY</b><br/>Control: 2GB RAM<br/>Targets: 2GB each (6GB total)<br/>Total: 8GB VMs + 4GB overhead<br/>Within 16GB Home Lab Limit"]
+    style Resources fill:#78909c,stroke:#37474f,color:white,stroke-dasharray: 5 5
     
     %% Legend
-    subgraph "LEGEND"
-        L1[💻 Process/Service]
-        L2[📁 Directory/Data]
-        L3[🔗 Communication]
-        L4[🔄 Workflow]
-        L5[⏰ Scheduling]
+    subgraph " "
+        L1["<font color='#2196f3'>💼 Management</font>"]
+        L2["<font color='#4caf50'>🎯 Infrastructure</font>"]
+        L3["<font color='#03a9f4'>🔄 Workflow</font>"]
+        L4["<font color='#ff9800'>⚡ Action</font>"]
+        L5["<font color='#795548'>⏰ Automation</font>"]
     end
-    
-    %% Styling
-    classDef control fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef target fill:#f1f8e9,stroke:#33691e,stroke-width:2px
-    classDef workflow fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef audit fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef schedule fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef network fill:#f5f5f5,stroke:#616161,stroke-width:1px,dashed
-    
-    class C1,C2,C3,C4,C5,C6,C7 control
-    class T1A,T1B,T1C,T2A,T2B,T2C,T3A,T3B,T3C target
-    class T1D,T2D,T3D target
-    class DW1,DW2,DW3,DW4,RW1,RW2,RW3,RW4,RW5,RW6,RW7,RW8 workflow
-    class AT1,AT2,AT3 audit
-    class S1,S2,S3,S4 schedule
-    class NETWORK network
 ```
 
 
